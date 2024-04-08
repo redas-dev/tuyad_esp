@@ -1,0 +1,53 @@
+#!/bin/sh /etc/rc.common
+
+USE_PROCD=1
+
+START=95
+STOP=90
+
+PIDFILE=/var/run/tuyad_esp.pid
+
+start_service(){
+    local prodID
+    local devID
+    local secret
+    local enable
+
+    config_load 'tuyad_esp'
+
+    config_get prodID main productID ''
+    config_get devID main deviceID  ''
+    config_get secret main secret  ''
+    config_get enable main enable '0'
+
+    if [ "$enable" -eq 1 ]; then
+        procd_open_instance
+
+        procd_set_param stdout 1
+        procd_set_param stderr 1
+        procd_set_param command /usr/bin/tuyad_esp  
+        
+        procd_append_param command -p "$prodID"
+        procd_append_param command -d "$devID" 
+        procd_append_param command -s "$secret"
+
+        procd_set_param pidfile "$PIDFILE"
+
+        procd_set_param file /etc/config/tuyad_esp
+
+        procd_close_instance
+    fi
+}
+
+stop_service(){
+    kill $(cat "$PIDFILE")
+}
+
+service_triggers(){
+	procd_add_reload_trigger "tuyad_esp"
+}
+
+reload_service(){
+	stop
+	start
+}
